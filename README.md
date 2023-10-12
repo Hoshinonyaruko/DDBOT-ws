@@ -44,6 +44,8 @@ C:\Users\Cosmo\Documents\LiteLoaderQQNT\plugins\red\red.exe ws://127.0.0.1:15630
 
 - 自动生成application.yaml后打开编辑,输入自己的机器人号码
 
+- 已知问题:权限系统暂时失效,判断不了管理员,解决方法,在ddbot.exe同目录新建 admin.txt 一行一个,手动录入有权限的人.
+
 ## 设计理念
 
 制作bot的本意是为了减轻一些重复的工作负担，bot只会做好bot份内的工作：
