@@ -19,15 +19,15 @@ DDBOT是一个基于 [MiraiGO](https://github.com/Mrs4s/MiraiGo) 的QQ群推送�
 
 [部署脚本](https://www.yuque.com/km57bt/hlhnxg/ww7f3aiwxtsldmq9)
 
--走完部署流程,这是我自己的部署脚本,但ddbot可以通用
+- 走完部署流程,这是我自己的部署脚本,但ddbot可以通用
 
--找到C:\Users\用户名\Documents\LiteLoaderQQNT\plugins\red文件夹
+- 找到C:\Users\用户名\Documents\LiteLoaderQQNT\plugins\red文件夹
 
--复制一个新的red.bat(直接双击red.bat会启动早苗)
+- 复制一个新的red.bat(直接双击red.bat会启动早苗)
 
--修改复制的red.bat名称为ddbot.bat
+- 修改复制的red.bat名称为ddbot.bat
 
--用记事本打开ddbot.bat
+- 用记事本打开ddbot.bat
 
 修改内部内容,
 下方内容只是示范!!
@@ -40,8 +40,9 @@ DDBOT是一个基于 [MiraiGO](https://github.com/Mrs4s/MiraiGo) 的QQ群推送�
 title 标题
 C:\Users\Cosmo\Documents\LiteLoaderQQNT\plugins\red\red.exe ws://127.0.0.1:15630/ws aaa3b2ea7f84f30d8fef5ef0a36c5a86028819dac9c6fcf68da272a57b0b1f77 122344 ws://127.0.0.1:16530
 ```
--修改完成后运行ddbot.bat然后运行本仓库release的ddbot.exe
--自动生成application.yaml后打开编辑,输入自己的机器人号码
+- 修改完成后运行ddbot.bat然后运行本仓库release的ddbot.exe
+
+- 自动生成application.yaml后打开编辑,输入自己的机器人号码
 
 ## 设计理念
 
