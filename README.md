@@ -41,6 +41,7 @@ title 标题
 C:\Users\Cosmo\Documents\LiteLoaderQQNT\plugins\red\red.exe ws://127.0.0.1:15630/ws aaa3b2ea7f84f30d8fef5ef0a36c5a86028819dac9c6fcf68da272a57b0b1f77 122344 ws://127.0.0.1:16530
 ```
 -修改完成后运行ddbot.bat然后运行本仓库release的ddbot.exe
+-自动生成application.yaml后打开编辑,输入自己的机器人号码
 
 ## 设计理念
 
