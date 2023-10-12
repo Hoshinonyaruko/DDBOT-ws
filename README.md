@@ -15,7 +15,7 @@ DDBOT是一个基于 [MiraiGO](https://github.com/Mrs4s/MiraiGo) 的QQ群推送�
 
 -----
 
-##使用方法
+## 使用方法
 
 [部署脚本](https://www.yuque.com/km57bt/hlhnxg/ww7f3aiwxtsldmq9)
 
