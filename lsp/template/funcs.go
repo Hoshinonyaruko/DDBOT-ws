@@ -7,14 +7,15 @@ package template
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/huandu/xstrings"
-	"github.com/shopspring/decimal"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/google/uuid"
+	"github.com/huandu/xstrings"
+	"github.com/shopspring/decimal"
 )
 
 // FuncMap is the type of the map defining the mapping from names to functions.
@@ -62,20 +63,35 @@ func builtins() FuncMap {
 		"member_info": memberInfo,
 		"poke":        poke,
 		"bot_uin":     botUin,
+		"addScore":    addScore,
+		"subScore":    subScore,
+		"setScore":    setScore,
+		"getScore":    getScore,
+		"delAcct":     delAcct,
+		"isAdmin":     isAdmin,
 
 		// DDBOT common
-		"hour":     hour,
-		"minute":   minute,
-		"second":   second,
-		"month":    month,
-		"year":     year,
-		"day":      day,
-		"yearday":  yearday,
-		"weekday":  weekday,
-		"cooldown": cooldown,
-		"openFile": openFile,
-		"abort":    abort,
-		"fin":      fin,
+		"hour":          hour,
+		"minute":        minute,
+		"second":        second,
+		"month":         month,
+		"year":          year,
+		"day":           day,
+		"yearday":       yearday,
+		"weekday":       weekday,
+		"getTimeStamp":  getTimeStamp,
+		"getTime":       getTime,
+		"getUnixTime":   getUnixTime,
+		"cooldown":      cooldown,
+		"openFile":      openFile,
+		"readLine":      readLine,
+		"findReadLine":  findReadLine,
+		"findWriteLine": findWriteLine,
+		"writeLine":     writeLine,
+		"updateFile":    updateFile,
+		"writeFile":     writeFile,
+		"abort":         abort,
+		"fin":           fin,
 
 		// cast
 		"float64": toFloat64,
@@ -144,6 +160,12 @@ func builtins() FuncMap {
 		"split":      func(sep, orig string) []string { return strings.Split(orig, sep) },
 		"join":       join,
 		"trunc":      trunc,
+		"replace":    strings.Replace,
+		"replaceAll": func(old, new, str string) string { return strings.ReplaceAll(str, old, new) },
+		"find":       strings.Index,
+		"findLast":   strings.LastIndex,
+		"count":      strings.Count,
+		"link":       func(a, b string) string { return a + b },
 
 		"snakecase": xstrings.ToSnakeCase,
 		"camelcase": xstrings.ToCamelCase,
@@ -177,10 +199,11 @@ func builtins() FuncMap {
 		"values":             values,
 
 		// list
-		"list":    list,
-		"append":  push,
-		"prepend": prepend,
-		"concat":  concat,
+		"list":        list,
+		"append":      push,
+		"prepend":     prepend,
+		"concat":      concat,
+		"delStrSlice": delStrSlice,
 
 		// http
 		"httpGet":      httpGet,

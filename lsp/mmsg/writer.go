@@ -1,6 +1,7 @@
 package mmsg
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"unicode"
@@ -125,15 +126,20 @@ func (m *MSG) ImageWithResize(buf []byte, alternative string, width, height uint
 }
 
 func (m *MSG) ImageByUrl(url string, alternative string, opts ...requests.Option) *MSG {
-	// img := NewImageByUrl(url, opts...)
-	// if len(alternative) > 0 {
-	// 	img.Alternative(alternative)
-	// }
-	// return m.Append(img)
-
+	img := NewImageByUrl(url, opts...)
+	if len(alternative) > 0 {
+		img.Alternative(alternative)
+	}
+	//return m.Append(img)
+	baseImg := base64.StdEncoding.EncodeToString(img.Buf)
+	if baseImg == "" {
+		baseImg = url
+	} else {
+		baseImg = "base64://" + baseImg
+	}
 	// 创建一个新的TextElement，其中包含格式化的URL
 	textElem := &message.TextElement{
-		Content: fmt.Sprintf("[CQ:image,file=%s]\n", url),
+		Content: fmt.Sprintf("[CQ:image,file=%s]", baseImg),
 	}
 
 	// 将新的TextElement添加到消息的Elements中

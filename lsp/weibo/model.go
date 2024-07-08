@@ -1,13 +1,14 @@
 package weibo
 
 import (
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/Sora233/DDBOT/lsp/concern_type"
 	"github.com/Sora233/DDBOT/lsp/mmsg"
 	localutils "github.com/Sora233/DDBOT/utils"
 	"github.com/sirupsen/logrus"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -134,6 +135,16 @@ func (c *CacheCard) prepare() {
 		}
 		for _, pic := range c.Card.GetMblog().GetPics() {
 			m.ImageByUrl(pic.GetLarge().GetUrl(), "")
+		}
+		if c.Card.GetMblog().GetRetweetedStatus() != nil {
+			if len(c.Card.GetMblog().GetRetweetedStatus().GetRawText()) > 0 {
+				m.Textf("\n\n原微博：\n%v", localutils.RemoveHtmlTag(c.Card.GetMblog().GetRetweetedStatus().GetRawText()))
+			} else {
+				m.Textf("\n\n原微博：\n%v", localutils.RemoveHtmlTag(c.Card.GetMblog().GetRetweetedStatus().GetText()))
+			}
+			for _, pic := range c.Card.GetMblog().GetRetweetedStatus().GetPics() {
+				m.ImageByUrl(pic.GetLarge().GetUrl(), "")
+			}
 		}
 	default:
 		logger.WithField("Type", c.CardType.String()).Debug("found new card_types")

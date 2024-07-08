@@ -1211,3 +1211,26 @@ ACFUN-{{ .name }}直播结束了
 ```
 
 </details>
+
+- bot被禁言（包含全体禁言）
+
+模板名：`trigger.group.bot_mute.tmpl`
+
+| 模板变量          | 类型     | 含义         |
+|---------------|--------|--------------|
+| group_code    | int64  | 发生禁言的群号码   |
+| group_name    | string | 发生禁言的群名称   |
+| member_code   | int64  | 被禁言的用户QQ号   |
+| member_name   | string | 被禁言的用户QQ昵称 |
+| operator_code | int64  | 操作者的用户QQ号   |
+| operator_name | string | 操作者的用户QQ昵称 |
+
+<details>
+  <summary>默认模板</summary>
+
+*该模板默认为空，即不发送消息*
+
+```text
+```
+
+</details>

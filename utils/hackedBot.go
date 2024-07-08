@@ -13,15 +13,16 @@ type HackedBot struct {
 }
 
 func (h *HackedBot) valid() bool {
-	//result := true // 默认设置为 true
+	result := true // 默认设置为 true
 
 	// if h == nil || h.Bot == nil || *h.Bot == nil || !(*h.Bot).Online.Load() {
 	// 	result = false
 	// }
 
-	// 输出结果 这里要机器人在线才会返回我虚拟的群信息 所以恒为true
-	//fmt.Printf("笨笨valid function returns: %v\n", result)
-	return true
+	// // 输出结果 这里要机器人在线才会返回我虚拟的群信息 所以恒为true
+	// logger.Printf("笨笨valid function returns: %v\n", result)
+
+	return result
 }
 
 func (h *HackedBot) FindFriend(uin int64) *client.FriendInfo {
@@ -32,7 +33,7 @@ func (h *HackedBot) FindFriend(uin int64) *client.FriendInfo {
 }
 
 func (h *HackedBot) FindGroup(code int64) *client.GroupInfo {
-	//fmt.Printf("h.testGroups: %v\n", h.testGroups) // 输出 h.testGroups
+	logger.Debugf("h.testGroups: %v\n", h.testGroups) // 输出 h.testGroups
 
 	if !h.valid() {
 		for _, gi := range h.testGroups {

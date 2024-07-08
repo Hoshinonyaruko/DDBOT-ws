@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/Sora233/DDBOT/requests"
-	"github.com/Sora233/DDBOT/utils/blockCache"
-	"github.com/ericpauley/go-quantize/quantize"
-	"github.com/nfnt/resize"
 	"image"
 	"image/draw"
 	"image/gif"
@@ -16,6 +12,11 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/Sora233/DDBOT/requests"
+	"github.com/Sora233/DDBOT/utils/blockCache"
+	"github.com/ericpauley/go-quantize/quantize"
+	"github.com/nfnt/resize"
 )
 
 func encodeImage(img image.Image, format string, resizedImageBuffer *bytes.Buffer) (err error) {
@@ -43,7 +44,8 @@ func ImageGet(url string, opt ...requests.Option) ([]byte, error) {
 	}
 	result := imageGetCache.WithCacheDo(url, func() blockCache.ActionResult {
 		opts := []requests.Option{
-			requests.TimeoutOption(time.Second * 15),
+			// 图片拉取超时时间为300秒，重试3次
+			requests.TimeoutOption(time.Second * 300),
 			requests.RetryOption(3),
 		}
 		opts = append(opts, opt...)
@@ -72,7 +74,8 @@ func ImageGetWithoutCache(url string, opt ...requests.Option) ([]byte, error) {
 	var result []byte
 	var err error
 	opts := []requests.Option{
-		requests.TimeoutOption(time.Second * 15),
+		// 图片拉取超时时间为300秒，重试3次
+		requests.TimeoutOption(time.Second * 300),
 		requests.RetryOption(3),
 	}
 	opts = append(opts, opt...)

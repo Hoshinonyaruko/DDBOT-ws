@@ -127,6 +127,9 @@ func (i *ImageBytesElement) Type() message.ElementType {
 func (i *ImageBytesElement) PackToElement(target Target) message.IMessageElement {
 	if i == nil {
 		return message.NewText("[空图片]\n")
+	} else if i.Buf == nil {
+		logger.Debugf("TargetPrivate %v nil image buf", target.TargetCode())
+		return nil
 	}
 	logger.Debugf("转换base64图片")
 	base64Image := base64.StdEncoding.EncodeToString(i.Buf)      // 这里进行转换

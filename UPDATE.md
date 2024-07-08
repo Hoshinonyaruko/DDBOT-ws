@@ -1,4 +1,190 @@
 ## DDBOT最近更新日志
+- 2024-07-07 0.2.6a(Wsa)
+  - 增加反向链接ws服务器的功能
+  - 完善DEBUG（白名单）功能
+  - 重写卡片消息识别并强化兼容
+  - 修复无法同意加群申请的问题
+  - 修复发送图片消息超时的问题
+  - 修复部分消息可能导致的崩溃
+  - 修改默认WS服务配置为正向
+  - 尝试修复拉格朗和GOCQ兼容问题
+
+- 2024-07-04 v0.2.5(WSa)
+  - 修复群成员名片变更事件入库
+  - 修复群事件监听入库(自身/他人，进/退群)
+  - 优化部分日志的显示顺序
+  - 重写所有API调用以优化性能
+  - 重写消息收取流程以优化性能
+  - 恢复原版禁言事件并加入全体禁言事件判定
+  - 新增禁言提醒模板（只提醒BOT管理员）
+   - 名称：trigger.group.bot_mute.tmpl
+   - 模板变量：group_code、group_name、member_code、member_name、operator_code、operator_name、mute_duration
+   - 默认不开启，使用方式请参考示例文档
+
+- 2024-07-03 v0.2.4(WSa)
+  - 恢复原版添加好友事件识别入库
+  - 修改添加好友后好友列表的重载逻辑
+  - 修复视频、Markdown消息识别入库
+  - 修改私聊消息发送流程和日志输出
+  - 修改小程序、合并转发的消息处理
+
+- 2024-07-02 v0.2.3(WSa)
+  - 支持合并转发消息的识别记录
+  - 支持区分常规图片和表情图片（NapCat）
+  - 修复更新下载连接错误的问题
+  - 修复无法获取好友昵称的问题
+  - 恢复私聊戳一戳事件响应入库(suki)
+
+- 2024-06-28 v0.2.2(WSa)
+  - 增加收到未知类型消息警告
+  - 识别forward消息（但暂不支持解析）
+  - 为模板增加了以下函数：
+    - 权限操作：
+      - 权限鉴别：isAdmin(uin int64, groupCode ...int64) bool
+    - 文件操作：
+      - 查找并读取行：findReadLine(path string, str string) string
+      - 查找并写入行：findWriteLine(path string, str string, newStr string) error
+    - 积分操作：
+      - 删除账户：delAcct(uin int64, groupCode int64) bool
+
+- 2024-06-25 v0.2.1(WSa)
+  - 修改群组/成员刷新策略以优化性能
+    - 除了启动时，其余均不再完整刷新
+    - 自身进群、退群时进行针对性刷新
+    - 其余只进行特定群组成员信息刷新
+
+- 2024-06-23 v0.2.0(WSa)
+  - 恢复好友申请处理相关功能
+  - 恢复群邀请处理相关功能
+  - 恢复机器人的群禁言判定（实验）
+  - 支持解析file消息并记录
+  - 支持解析卡片消息并记录（实验）
+  - 取消获取好友/群组/群员信息的流控
+  - 发送流控限制为10条消息/秒（群聊）
+    - 其实无法触及，无需在意（调试用）
+  - 更改图片的发送方式，增加重试：
+    - 如果获取到了图片二进制，那就base64编码
+    - 如果获取失败了，那就投递url给前端处理
+  - 修改空图片的处理方式为丢弃
+  - 修改发送反馈等待时间为动态计算
+  - 为消息处理添加消息队列（发送、接收）
+  - 修复未加载群信息时发送消息导致的崩溃
+  - 为模板增加了如下函数：
+    - 时间操作：
+      - 取时间：getTime( "now" | "2024-06-22 15:15:47" | time string, "datetime" | "dateonly" | "timeonly" | "stamp" | format string) string
+      - 取时间戳：getTimeStamp( "2024-06-22 15:15:47" | time sring) int64
+      - 时间戳转时间：getUnixTime( 1719040547 | Stamp int64, "datetime" | "dateonly" | "timeonly" | "stamp" | format string ) string
+    - 文本操作：
+      - 替换文本：replace (str string, old string, new string, n int) string
+      - 替换所有文本：replaceAll (str string, old string, new string) string
+      - 查找第一次出现：find (str string, sub string) int
+      - 查找最后一次出现：findLast (str string, sub string) int
+      - 统计出现次数：count (str string, sub string) int
+      - 连接文本：link (text string, text string) string
+    - 数组操作：
+      - 删除str数组成员：delStrSlice (arr []string, sub string) []string
+    - 文件操作：
+      - 读取一行：readLine (path string, line int64) string, err0r
+      - 写入一行：writeLine (path string, line int64, content string) err0r
+
+- 2024-06-13 v0.1.1(WSa)
+  - 继续优化ws消息处理函数
+  - 增加、优化部分日志点（和分级）
+  - 修复群组信息发送超时误报
+  - 修改消息发送超时时间为30s
+  - 修复消息发送长度重复展示的问题
+
+- 2024-06-09 v0.1.0(WSa)
+  - 优化部分日志点和日志显示，方便判断
+  - 继续优化ws消息处理，调整协程分配
+  - 重构群组信息刷新func，引入流控机制
+  - 修复部分图片消息被误判发送失败的问题
+  - 跳过miraigo的发送调用，避免意外的返回值
+  - 恢复长度限制（文本4500，图片20）避免错误
+  - 重新启用自动检查更新，方便用户及时升级
+
+- 2024-06-08 v0.0.9(WSa)
+  - 修复weibo推送不发送图片的问题
+  - 修复weibo推送没附带原微博的问题
+  - 修改转发微博的推送样式与B站统一
+  - 紧急修复发送失败导致假死的问题
+  - 消息入库/日志输出兼容Marketface
+
+- 2024-06-05 v0.0.8b(WSa)
+  - 修复部分ws-plugin兼容问题
+  - 将私聊日志与群聊日志匹配输出
+  - 修复文本日志会清空其它日志的问题
+  - 改善日志输出方式，整合function
+
+- 2024-06-05 v0.0.8(WSa)
+  - 恢复部分原生消息发送判定
+  - 修复日志输出导致的ws阻塞
+  - 优化群消息发送判定的log记录
+  - 改进loglevel为info下的日志输出
+  - 调整、取消部分日志输出，避免重复
+  - 增加DD可以接收到的消息类型（文本、At、图片、语音、表情、引用）
+  - Template模板增加了4个函数，妈妈再也不用担心积分没用了>_0
+    - 增加积分：addScore(uin int64, groupCode int64, num int64) 
+    - 减少积分：subScore(uin int64, groupCode int64, num int64)
+    - 设置积分：setScore(uin int64, groupCode int64, num int64) 
+    - 读取积分：getScore(uin int64, groupCode int64)
+
+- 2024-06-03 v0.0.7a(WSa)
+  - 重新启用BOT信息的延迟加载（可在配置文件中修改延迟时间）
+  - 修改收到群管理变动事件后不更新群员信息的问题
+  - 更改了部分判断逻辑，清理无效操作
+  - Template模板增加了writeFile、updateFile函数
+    - 覆盖写入：writeFile(path string, content string) 
+    - 追加写入：updateFile(path string, content string)
+    - 文本支持\n等转义字符的操作
+  
+- 2024-05-30 v0.0.6a(WSa)
+  - 紧急修复自身加、退群后不及时更新群员信息的问题
+
+- 2024-05-29 v0.0.6(WSa)
+  - 修复逻辑漏洞导致的加群崩溃问题
+  - 修复Quit指令，现在可以正常退群
+  - 修复群消息发送结果判定，恢复失败重试功能
+  - 修复收到的上报自身消息目标错误（私聊）
+  - 将好友、群、群员信息改为连上ws后加载（避免断线后不刷新）
+  - 优化部分通信和赋值逻辑，避免信息错漏，日志错漏
+
+- 2024-05-26 v0.0.5b(WSa)
+  - 兼容 NapCat / ws-plugin
+  - 修复无法获取好友列表的问题
+  - 修复群/私聊消息的好友判断
+  - 修复因请求传参类型错误导致NapCat无法获取群员信息的问题
+  - 修复群员、好友变更事件监听，发生变动后自动更新
+  - 优化通信过程，避免通信错误导致重连(NapCat)
+
+- 2024-05-23 v0.0.4(WSa)
+  - 恢复DDBOT原生权限管理
+  - 修复消息长度超限导致at消息发送失败
+
+- 2024-05-22 v0.0.3f(WSa)
+  - 兼容 LLOnebot (Onebot v11)
+  - 修复无法正确获取at消息的问题
+  - 修复群名称无法正确获取
+  - 修复无法获取群列表的问题
+  - 修复群成员信息无法获取
+  - 修复无法真正at人或全体
+  - 修复at他人时不显示昵称
+  - 修复机器人无法引用消息
+  - 修复无法watch已关注的主播
+  - 修改B站开播消息重复推送
+  - 修改群文件上传超时时间为300s
+  - 修改图片拉取超时时间为300s
+
+- 2024-02-28 v0.0.2(WSa)
+  - 增加/调整了部分LOG和分级
+  - 修复Template使用{{- cut -}}会导致消息发送中断的问题
+
+- 2024-02-26 v0.0.1(WSa)
+  - 完善日志分级
+      只需要调低loglevel(比如error)就不用看一大堆base64编码了
+  - 开放ws端口设置
+      默认 ws-server: 0.0.0.0:15630
+      在第一次创建配置文件的时候会写入，其它时候请手动添加
 
 - 2023-07-01 v1.1.2
   - 更新登录代码 

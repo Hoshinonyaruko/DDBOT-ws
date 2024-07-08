@@ -117,7 +117,7 @@ func Run() {
 
 	// 刷新好友列表，群列表
 	//以后刷新
-	//bot.RefreshList()
+	// bot.RefreshList()
 
 	lsp.Instance.PostStart(bot.Instance)
 	fmt.Println("运行完了lsp.Instance.PostStart(bot.Instance)")
@@ -130,11 +130,8 @@ func Run() {
 
 var exampleConfig = func() string {
 	s := `
-# 注意，填写时请把井号及后面的内容删除，并且冒号后需要加一个空格
-sign-server: ""
+### 注意，填写时请把井号及后面的内容删除，并且冒号后需要加一个空格
 bot:
-  account:  # 你bot的qq号，不填则使用扫码登陆
-  password: # 你bot的qq密码
   onJoinGroup: 
     rename: "【bot】"  # BOT进群后自动改名，默认改名为“【bot】”，如果留空则不自动改名
 
@@ -145,14 +142,52 @@ bot:
 # 关注用户 / 取消关注用户 / 查看关注列表
 # 请注意，订阅一个账号后，此处使用的b站账号将自动关注该账号
 bilibili:
-  SESSDATA: # 你的b站cookie
-  bili_jct: # 你的b站cookie
-  interval: 25s
+  SESSDATA: "" # 你的b站cookie
+  bili_jct: "" # 你的b站cookie
+  interval: 25s # 直播状态和动态检测间隔，过快可能导致ip被暂时封禁
+  imageMergeMode: "auto" # 设置图片合并模式，支持 "auto" / "only9" / "off"
+                         # auto 为默认策略，存在比较刷屏的图片时会合并
+                         # only9 表示仅当恰好是9张图片的时候合并
+                         # off 表示不合并
+  hiddenSub: false    # 是否使用悄悄关注，默认不使用
+  unsub: false        # 是否自动取消关注，默认不取消，如果您的b站账号有多个bot同时使用，取消可能导致推送丢失
+  minFollowerCap: 0        # 设置订阅的b站用户需要满足至少有多少个粉丝，默认为0，设为-1表示无限制
+  disableSub: false        # 禁止ddbot去b站关注帐号，这意味着只能订阅帐号已关注的用户，或者在b站手动关注
+  onlyOnlineNotify: false  # 是否不推送Bot离线期间的动态和直播，默认为false表示需要推送，设置为true表示不推送
 
 concern:
   emitInterval: 5s
 
+template:      # 是否启用模板功能，true为启用，false为禁用，默认为禁用
+  enable: true # 需要了解模板请看模板文档
+  
+autoreply: # 自定义命令自动回复，自定义命令通过模板发送消息，且不支持任何参数，需要同时启用模板功能
+  group:   # 需要了解该功能请看模板文档
+    command: ["签到"]
+  private:
+    command: [ ]
+
+# 重定义命令前缀，优先级高于bot.commandPrefix
+# 如果有多个，可填写多项，prefix支持留空，可搭配自定义命令使用
+# 例如下面的配置为：<Q命令1> <命令2> </help>
+customCommandPrefix:
+  签到: ""
+  
+# 日志等级，可选值：trace / debug / info / warn / error
 logLevel: info
+
+# ws模式支持ws-server（正向）和ws-reverse（反向）
+# ws-server 默认监听全部请求，如需限制请修改为指定ip:端口
+# ws-reverse 需要配合反向ws服务器使用，默认为LLOneBot地址
+websocket:
+  mode: ws-server
+  ws-server: 0.0.0.0:15630
+  ws-reverse: ws://localhost:3001
+
+# 延迟加载好友、群组、群员信息
+reloadDelay:
+  enable: true # 是否启用数据延迟加载
+  time: 3s # 延迟时间，默认为3秒
 `
 	// win上用记事本打开不会正确换行
 	if runtime.GOOS == "windows" {

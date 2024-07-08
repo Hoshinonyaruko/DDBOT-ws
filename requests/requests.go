@@ -2,15 +2,16 @@ package requests
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/Sora233/DDBOT/proxy_pool"
 	"github.com/Sora233/MiraiGo-Template/utils"
 	"github.com/guonaihong/gout"
 	"github.com/guonaihong/gout/dataflow"
 	"github.com/guonaihong/gout/middler"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 )
 
 var logger = utils.GetModuleLogger("request")
@@ -39,7 +40,8 @@ func (o *option) getGout() *gout.Client {
 	if o.Timeout != 0 {
 		goutOpts = append(goutOpts, gout.WithTimeout(o.Timeout))
 	} else {
-		goutOpts = append(goutOpts, gout.WithTimeout(time.Second*5))
+		// 修改上传文件超时时间
+		goutOpts = append(goutOpts, gout.WithTimeout(time.Second*300))
 	}
 	if o.InsecureSkipVerify {
 		goutOpts = append(goutOpts, gout.WithInsecureSkipVerify())

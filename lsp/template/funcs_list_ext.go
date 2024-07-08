@@ -83,3 +83,14 @@ func concat(lists ...interface{}) interface{} {
 	}
 	return res
 }
+
+func delStrSlice(s []string, elem string) []string {
+	j := 0
+	for _, v := range s {
+		if v != elem {
+			s[j] = v
+			j++
+		}
+	}
+	return s[:j]
+}

@@ -173,6 +173,7 @@ type (
 		Message       string
 		RequesterUin  int64
 		RequesterNick string
+		Flag          string
 
 		client *QQClient
 	}

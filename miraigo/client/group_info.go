@@ -68,13 +68,13 @@ func init() {
 	decoders["OidbSvc.0x88d_0"] = decodeGroupInfoResponse
 }
 
-func (c *QQClient) GetGroupInfo(groupCode int64) (*GroupInfo, error) {
-	i, err := c.sendAndWait(c.buildGroupInfoRequestPacket(groupCode))
-	if err != nil {
-		return nil, err
-	}
-	return i.(*GroupInfo), nil
-}
+// func (c *QQClient) GetGroupInfo(groupCode int64) (*GroupInfo, error) {
+// 	i, err := c.sendAndWait(c.buildGroupInfoRequestPacket(groupCode))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return i.(*GroupInfo), nil
+// }
 
 // OidbSvc.0x88d_0
 func (c *QQClient) buildGroupInfoRequestPacket(groupCode int64) (uint16, []byte) {
@@ -303,9 +303,10 @@ func (g *GroupInfo) MuteAnonymous(id, nick string, seconds int32) error {
 	return nil
 }
 
-func (g *GroupInfo) Quit() {
+func (g *GroupInfo) Quit(client *QQClient) {
+	g.client = client
 	if g.SelfPermission() != Owner {
-		g.client.quitGroup(g.Code)
+		g.client.quitGroup(g)
 	}
 }
 
@@ -319,6 +320,7 @@ func (g *GroupInfo) AdministratorOrOwner() bool {
 
 func (g *GroupInfo) FindMember(uin int64) *GroupMemberInfo {
 	r := g.Read(func(info *GroupInfo) any {
+		g.sort()
 		return info.FindMemberWithoutLock(uin)
 	})
 	if r == nil {

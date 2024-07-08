@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
+	"runtime/debug"
+	"sync"
+	"time"
+
 	localdb "github.com/Sora233/DDBOT/lsp/buntdb"
 	"github.com/Sora233/DDBOT/lsp/cfg"
 	"github.com/Sora233/DDBOT/lsp/concern_type"
@@ -12,10 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/buntdb"
 	"go.uber.org/atomic"
-	"runtime"
-	"runtime/debug"
-	"sync"
-	"time"
 )
 
 var logger = utils.GetModuleLogger("concern")

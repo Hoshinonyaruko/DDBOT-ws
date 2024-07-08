@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"math"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -44,7 +44,26 @@ type WebSocketParams struct {
 	Message string `json:"message"`
 }
 
-func (c *QQClient) SendGroupMessage(groupCode int64, m *message.SendingMessage, newstr string) *message.GroupMessage {
+func (c *QQClient) SendLimit() (*message.GroupMessage, error) {
+	for {
+		select {
+		case sendMsg := <-sendMessageQueue:
+		pass:
+			if c.limiterMessageSend.Grant() {
+				logger.Debug("流控：允许通过")
+				var sendResp SendResp
+				sendResp.RetMSG, sendResp.Error = c.RealSendMSG(sendMsg.GroupCode, sendMsg.Message, sendMsg.NewStr)
+				sendMsg.ResultChan <- sendResp
+			} else {
+				logger.Debug("流控：拒绝通过")
+				time.Sleep(time.Second * 1)
+				goto pass
+			}
+		}
+	}
+}
+
+func (c *QQClient) RealSendMSG(groupCode int64, m *message.SendingMessage, newstr string) (*message.GroupMessage, error) {
 	// 检查groupCode是否是由字符串经MD5得到的
 	originalGroupID, exists := originalStringFromInt64(groupCode)
 
@@ -53,23 +72,7 @@ func (c *QQClient) SendGroupMessage(groupCode int64, m *message.SendingMessage, 
 	if exists {
 		finalGroupID = originalGroupID
 	}
-
-	msg := WebSocketActionMessage{
-		Action: "send_group_msg",
-		Params: WebSocketParams{
-			GroupID: finalGroupID,
-			Message: newstr,
-		},
-		Echo: c.currentEcho, // 使用保存的 echo 值
-	}
-
-	data, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Printf("Failed to marshal message to JSON: %v", err)
-		return nil
-	}
-	fmt.Printf("发群信息action给ws客户端: %v", msg)
-	c.sendToWebSocketClient(c.ws, data)
+	// 图片数量统计
 	imgCount := 0
 	for _, e := range m.Elements {
 		switch e.Type() {
@@ -77,18 +80,141 @@ func (c *QQClient) SendGroupMessage(groupCode int64, m *message.SendingMessage, 
 			imgCount++
 		}
 	}
+	//判定消息长度限制
 	msgLen := message.EstimateLength(m.Elements)
-	if msgLen > message.MaxMessageSize || imgCount > 50 {
-		return nil
+	imgLen := 0
+	totalLen := 0
+	if len(m.Elements) > 0 {
+		for _, e := range m.Elements {
+			//判断消息是否为图片
+			if text, ok := e.(*message.TextElement); ok {
+				re := regexp.MustCompile(`\[CQ:image,file=(.*?)\]`)
+				picCount := re.FindAllStringIndex(text.Content, -1)
+				imgCount += len(picCount)
+				if imgCount > 0 {
+					tmpLen := 0
+					for _, pic := range picCount {
+						tmpLen += pic[1] - pic[0]
+					}
+					imgLen += tmpLen
+					msgLen -= tmpLen
+				}
+			}
+		}
+		totalLen = msgLen + imgLen
+		logger.Infof("本次发送总长: %d, 文本: %d, 图片: %d, 长度：%d", totalLen, msgLen, imgCount, imgLen)
 	}
-	return c.sendGroupMessage(groupCode, false, m)
+	//判断是否超过最大发送长度
+	if msgLen > message.MaxMessageSize || imgCount > 20 {
+		return nil, errors.New("消息或图片长度超限，取消本次发送")
+	}
+	// // 构造消息
+	// echo := generateEcho("send_group_msg")
+	// msg := WebSocketActionMessage{
+	// 	Action: "send_group_msg",
+	// 	Params: WebSocketParams{
+	// 		GroupID: finalGroupID,
+	// 		Message: newstr,
+	// 	},
+	// 	Echo: echo,
+	// }
+	// data, err := json.Marshal(msg)
+	// if err != nil {
+	// 	return nil, errors.New(fmt.Sprintf("Failed to marshal message to JSON: %v", err))
+	// }
+	// // 创建响应通道并添加到映射中
+	// respChan := make(chan *ResponseSendMessage)
+	// c.responseMessage[echo] = respChan
+	expTime := math.Ceil(float64(totalLen) / 131072)
+	if totalLen < 1024 && imgCount > 0 {
+		expTime = 90
+	}
+	expTime += 6
+	tmpMsg := ""
+	if len(newstr) > 75 {
+		tmpMsg = newstr[:75] + "..."
+	} else {
+		tmpMsg = newstr
+	}
+	logger.Infof("发送 群消息 给 (%v) 预期耗时 %.0fs: %s", finalGroupID, expTime, tmpMsg)
+	//c.sendToWebSocketClient(c.ws, data)
+	data, err := c.SendApi("send_group_msg", map[string]any{
+		"group_id": finalGroupID,
+		"message":  newstr,
+	}, expTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "发送群消息失败")
+	}
+	t, err := json.Marshal(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "解析群消息返回数据失败")
+	}
+	var resp ResponseSendMessage
+	err = json.Unmarshal(t, &resp.Data)
+	if err != nil {
+		return nil, errors.Wrap(err, "解析群消息返回数据失败")
+	}
+	retMsg := message.GroupMessage{
+		Id:         resp.Data.MessageID,
+		InternalId: int32(rand.Uint32()),
+		GroupCode:  groupCode,
+		GroupName:  "",
+		Sender: &message.Sender{
+			Uin:      c.Uin,
+			Nickname: c.Nickname,
+			IsFriend: true,
+		},
+		Time:     int32(time.Now().Unix()),
+		Elements: m.Elements,
+	}
+	if c.GroupList != nil {
+		retMsg.GroupName = c.FindGroupByUin(groupCode).Name
+	}
+	return &retMsg, nil
+	// // 发送消息
+	// seq, pkt := c.buildGroupSendingPacket(groupCode, mr, 1, 0, 0, forward, m.Elements)
+	// _ = c.sendPacket(pkt)
+	// // 等待响应或超时
+	// select {
+	// case resp := <-respChan:
+	// 	delete(c.responseMessage, echo)
+	// 	if resp.Retcode == 0 {
+
+	// // 等待响应或超时
+	// select {
+	// case resp := <-respChan:
+	// 	delete(c.responseMessage, echo)
+	// 	if resp.Retcode == 0 {
+	// 		retMsg := &message.GroupMessage{
+	// 			Id:         resp.Data.MessageID,
+	// 			InternalId: int32(rand.Uint32()),
+	// 			GroupCode:  groupCode,
+	// 			GroupName:  "",
+	// 			Sender: &message.Sender{
+	// 				Uin:      c.Uin,
+	// 				Nickname: c.Nickname,
+	// 				IsFriend: true,
+	// 			},
+	// 			Time:     int32(time.Now().Unix()),
+	// 			Elements: m.Elements,
+	// 		}
+	// 		if c.GroupList != nil {
+	// 			retMsg.GroupName = c.FindGroupByUin(groupCode).Name
+	// 		}
+	// 		return retMsg, nil
+	// 	} else {
+	// 		return nil, errors.New(fmt.Sprintf("Failed to send group message: %v", resp.Message))
+	// 	}
+	// case <-time.After(time.Duration(expTime) * time.Second):
+	// 	delete(c.responseMessage, echo)
+	// 	return nil, errors.New("Send group message timeout")
+	// }
 }
 
 // SendGroupForwardMessage 发送群合并转发消息
 func (c *QQClient) SendGroupForwardMessage(groupCode int64, m *message.ForwardElement) *message.GroupMessage {
 	return c.sendGroupMessage(groupCode, true,
-		&message.SendingMessage{Elements: []message.IMessageElement{m}},
-	)
+		&message.SendingMessage{Elements: []message.IMessageElement{m}})
 }
 
 // GetGroupMessages 从服务器获取历史信息
@@ -159,7 +285,6 @@ func (c *QQClient) sendGroupMessage(groupCode int64, forward bool, m *message.Se
 	select {
 	case mid = <-ch:
 		ret.Id = mid
-		return ret
 	case <-time.After(time.Second * 5):
 		if g, err := c.GetGroupInfo(groupCode); err == nil {
 			if history, err := c.GetGroupMessages(groupCode, g.LastMsgSeq-10, g.LastMsgSeq+1); err == nil {
@@ -170,8 +295,8 @@ func (c *QQClient) sendGroupMessage(groupCode int64, forward bool, m *message.Se
 				}
 			}
 		}
-		return ret
 	}
+	return ret
 }
 
 func (c *QQClient) multiMsgApplyUp(groupCode int64, data []byte, hash []byte, buType int32) (*multimsg.MultiMsgApplyUpRsp, []byte, error) {

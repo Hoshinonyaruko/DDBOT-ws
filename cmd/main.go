@@ -82,8 +82,10 @@ func main() {
 
 	fmt.Println("DDBOT唯一指定交流群：755612788")
 	fmt.Println("二次修改:https://github.com/Hoshinonyaruko/DDBOT-ws")
-	fmt.Println("改版问题交流群:670078416")
-	fmt.Println("本分支版本去除了miraigo并将应用逻辑开放到websocket,以onebotv11标准与客户端进行交互.")
+	fmt.Println("三次修改:https://github.com/cnxysoft/DDBOT-WSa")
+	fmt.Println("改版问题交流群:687344578")
+	fmt.Println("本分支版本主要以修复功能并接入LLOneBot为目的")
+	fmt.Println("LLOneBot仓库:https://github.com/LLOneBot/LLOneBot")
 
 	if cli.Debug {
 		lsp.Debug = true

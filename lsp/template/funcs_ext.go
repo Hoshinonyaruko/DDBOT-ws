@@ -1,8 +1,17 @@
 package template
 
 import (
+	"bufio"
 	"encoding/base64"
 	"fmt"
+	"io"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/Mrs4s/MiraiGo/client"
 	"github.com/Mrs4s/MiraiGo/message"
 	localdb "github.com/Sora233/DDBOT/lsp/buntdb"
@@ -10,12 +19,6 @@ import (
 	"github.com/Sora233/DDBOT/lsp/mmsg"
 	localutils "github.com/Sora233/DDBOT/utils"
 	"github.com/shopspring/decimal"
-	"math/rand"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
-	"time"
 )
 
 var funcsExt = make(FuncMap)
@@ -99,6 +102,194 @@ func poke(uin int64) *mmsg.PokeElement {
 
 func botUin() int64 {
 	return localutils.GetBot().GetUin()
+}
+
+func isAdmin(uin int64, groupCode ...int64) bool {
+	key := localdb.Key("Permission", uin, "Admin")
+	ret := localdb.Exist(key)
+	if !ret && len(groupCode) > 0 {
+		key = localdb.Key("GroupPermission", groupCode[0], uin, "GroupAdmin")
+		ret = localdb.Exist(key)
+	}
+	return ret
+}
+
+func delAcct(uin int64, groupCode int64) bool {
+	key := localdb.Key("Score", groupCode, uin)
+	_, err := localdb.Delete(key)
+	if err != nil {
+		logger.Errorf("del Account error %v", err)
+		return false
+	}
+	return true
+}
+
+func setScore(uin int64, groupCode int64, num int64) int64 {
+	// date := time.Now().Format("20060102")
+
+	if num < 0 {
+		logger.Error("template: set score num must be positive")
+		return -1
+	}
+
+	var score int64
+	err := localdb.RWCover(func() error {
+		var err error
+		scoreKey := localdb.Key("Score", groupCode, uin)
+		// dateMarker := localdb.Key("ScoreDate", groupCode, uin, date)
+
+		score, err = localdb.GetInt64(scoreKey, localdb.IgnoreNotFoundOpt())
+		if err != nil {
+			return err
+		}
+		// if localdb.Exist(dateMarker) {
+		// 	logger = logger.WithField("current_score", score)
+		// 	return nil
+		// }
+
+		err = localdb.SetInt64(scoreKey, num)
+		if err != nil {
+			return err
+		}
+
+		score, err = localdb.GetInt64(scoreKey, localdb.IgnoreNotFoundOpt())
+		if err != nil {
+			return err
+		}
+
+		// err = localdb.Set(dateMarker, "", localdb.SetExpireOpt(time.Hour*24*3))
+		// if err != nil {
+		// 	return err
+		// }
+		logger = logger.WithField("new_score", score)
+		return nil
+	})
+	if err != nil {
+		logger.Errorf("add score error %v", err)
+		return -1
+	}
+	return score
+}
+
+func addScore(uin int64, groupCode int64, num int64) int64 {
+	// date := time.Now().Format("20060102")
+
+	if num <= 0 {
+		logger.Error("template: add score num must be positive")
+		return -1
+	}
+
+	var score int64
+	err := localdb.RWCover(func() error {
+		var err error
+		scoreKey := localdb.Key("Score", groupCode, uin)
+		// dateMarker := localdb.Key("ScoreDate", groupCode, uin, date)
+
+		score, err = localdb.GetInt64(scoreKey, localdb.IgnoreNotFoundOpt())
+		if err != nil {
+			return err
+		}
+		// if localdb.Exist(dateMarker) {
+		// 	logger = logger.WithField("current_score", score)
+		// 	return nil
+		// }
+
+		score, err = localdb.IncInt64(scoreKey, num)
+		if err != nil {
+			return err
+		}
+
+		// err = localdb.Set(dateMarker, "", localdb.SetExpireOpt(time.Hour*24*3))
+		// if err != nil {
+		// 	return err
+		// }
+		logger = logger.WithField("new_score", score)
+		return nil
+	})
+	if err != nil {
+		logger.Errorf("add score error %v", err)
+		return -1
+	}
+	return score
+}
+
+func subScore(uin int64, groupCode int64, num int64) int64 {
+	// date := time.Now().Format("20060102")
+
+	if num <= 0 {
+		logger.Error("template: sub score num must be positive")
+		return -1
+	}
+
+	var score int64
+	err := localdb.RWCover(func() error {
+		var err error
+		scoreKey := localdb.Key("Score", groupCode, uin)
+		// dateMarker := localdb.Key("ScoreDate", groupCode, uin, date)
+
+		score, err = localdb.GetInt64(scoreKey, localdb.IgnoreNotFoundOpt())
+		if err != nil {
+			return err
+		}
+		// if localdb.Exist(dateMarker) {
+		// 	logger = logger.WithField("current_score", score)
+		// 	return nil
+		// }
+
+		score, err = localdb.IncInt64(scoreKey, -num)
+		if err != nil {
+			return err
+		}
+
+		// err = localdb.Set(dateMarker, "", localdb.SetExpireOpt(time.Hour*24*3))
+		// if err != nil {
+		// 	return err
+		// }
+		logger = logger.WithField("new_score", score)
+		return nil
+	})
+	if err != nil {
+		logger.Errorf("sub score error %v", err)
+		return -1
+	}
+	return score
+}
+
+func getScore(uin int64, groupCode int64) int64 {
+	// date := time.Now().Format("20060102")
+
+	var score int64
+	err := localdb.RWCover(func() error {
+		var err error
+		scoreKey := localdb.Key("Score", groupCode, uin)
+		// dateMarker := localdb.Key("ScoreDate", groupCode, uin, date)
+
+		score, err = localdb.GetInt64(scoreKey, localdb.IgnoreNotFoundOpt())
+		if err != nil {
+			return err
+		}
+		// if localdb.Exist(dateMarker) {
+		// 	logger = logger.WithField("current_score", score)
+		// 	return nil
+		// }
+
+		// score, err = localdb.IncInt64(scoreKey, num)
+		// if err != nil {
+		// 	return err
+		// }
+
+		// err = localdb.Set(dateMarker, "", localdb.SetExpireOpt(time.Hour*24*3))
+		// if err != nil {
+		// 	return err
+		// }
+		logger = logger.WithField("now_score", score)
+		return nil
+	})
+	if err != nil {
+		logger.Errorf("get score error %v", err)
+		return -1
+	}
+	return score
 }
 
 func picUri(uri string) (e *mmsg.ImageBytesElement) {
@@ -279,6 +470,30 @@ func openFile(path string) []byte {
 	return data
 }
 
+func updateFile(path string, data string) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logger.Errorf("template: openFile <%v> error %v", path, err)
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString(data)
+	if err != nil {
+		logger.Errorf("template: updateFile <%v> error %v", path, err)
+		return err
+	}
+	return nil
+}
+
+func writeFile(path string, data string) error {
+	err := os.WriteFile(path, []byte(data), 0644)
+	if err != nil {
+		logger.Errorf("template: writeFile <%v> error %v", path, err)
+		return err
+	}
+	return nil
+}
+
 type ddError struct {
 	ddErrType string
 	e         message.IMessageElement
@@ -313,4 +528,162 @@ func abort(e ...interface{}) interface{} {
 
 func fin() interface{} {
 	panic(errFin)
+}
+
+func getUnixTime(i int64, f string) string {
+	t := time.Unix(i, 0)
+	return getTime(t, f)
+}
+
+func getTimeStamp(t string) int64 {
+	loc, _ := time.LoadLocation("Local")
+	fTime, _ := time.ParseInLocation(time.DateTime, t, loc)
+	ret := fTime.Unix()
+	return ret
+}
+
+func getTime(s interface{}, f string) string {
+	var t time.Time
+	if _, ok := s.(time.Time); ok {
+		t = s.(time.Time)
+	} else if _, ok := s.(string); ok {
+		if s.(string) == "now" {
+			t = time.Now()
+		} else {
+			tmp, err := time.Parse(time.DateTime, s.(string))
+			if err != nil {
+				return "parse time error"
+			}
+			t = tmp
+		}
+	}
+	if f == "dateonly" {
+		return t.Format(time.DateOnly)
+	} else if f == "timeonly" {
+		return t.Format(time.TimeOnly)
+	} else if f == "stamp" {
+		return t.Format(time.Stamp)
+	} else {
+		return t.Format(time.DateTime)
+	}
+}
+
+func readLine(p string, l int64) string {
+	file, err := os.OpenFile(p, os.O_RDONLY, 0666)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	var ret string
+	for i := int64(0); ; i++ {
+		line, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		if i == l-1 {
+			ret = line
+			break
+		}
+	}
+	return ret
+}
+
+func findReadLine(p string, s string) string {
+	file, err := os.OpenFile(p, os.O_RDONLY, 0666)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		if strings.Contains(line, s) {
+			return line
+		}
+	}
+	return ""
+}
+
+func findWriteLine(p string, s string, n string) error {
+	file, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	lines := make([]string, 0)
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		if strings.Contains(line, s) {
+			lines = append(lines, n)
+		} else {
+			lines = append(lines, line)
+		}
+	}
+	writer := bufio.NewWriter(file)
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		logger.Errorf("template: seek <%v> error %v", p, err)
+		return err
+	}
+	for _, line := range lines {
+		_, err = writer.WriteString(line)
+		if err != nil {
+			logger.Errorf("template: writeFile <%v> error %v", p, err)
+			return err
+		}
+	}
+	writer.Flush()
+	return nil
+}
+
+func writeLine(p string, l int64, s string) error {
+	file, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	if l == 0 {
+		_, err = writer.WriteString(s)
+		if err != nil {
+			logger.Errorf("template: writeFile <%v> error %v", p, err)
+			return err
+		}
+	} else {
+		lines := make([]string, 0)
+		reader := bufio.NewReader(file)
+		for i := int64(0); ; i++ {
+			line, err := reader.ReadString('\n')
+			if err == io.EOF {
+				break
+			}
+			if i == l-1 {
+				lines = append(lines, s)
+			} else {
+				lines = append(lines, line)
+			}
+		}
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			logger.Errorf("template: seek <%v> error %v", p, err)
+			return err
+		}
+		for _, line := range lines {
+			_, err = writer.WriteString(line)
+			if err != nil {
+				logger.Errorf("template: writeFile <%v> error %v", p, err)
+				return err
+			}
+		}
+	}
+	writer.Flush()
+	return nil
 }

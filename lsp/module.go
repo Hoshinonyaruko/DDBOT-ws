@@ -3,8 +3,8 @@ package lsp
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"runtime/debug"
+	"strconv"
 	"sync"
 	"time"
 
@@ -28,6 +28,7 @@ import (
 	"github.com/Sora233/DDBOT/utils/msgstringer"
 	"github.com/Sora233/MiraiGo-Template/bot"
 	"github.com/Sora233/MiraiGo-Template/config"
+	"github.com/Sora233/sliceutil"
 	"github.com/fsnotify/fsnotify"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robfig/cron/v3"
@@ -222,6 +223,24 @@ func (l *Lsp) Init() {
 func (l *Lsp) PostInit() {
 }
 
+func (l *Lsp) DebugCheck(groupCode int64, uin int64, isGroupMessage bool) bool {
+	logger.Info("Debug: 触发白名单匹配")
+	var ok bool
+	if Debug {
+		if isGroupMessage {
+			if sliceutil.Contains(config.GlobalConfig.GetStringSlice("debug.group"), strconv.FormatInt(groupCode, 10)) {
+				ok = true
+			}
+		}
+		if sliceutil.Contains(config.GlobalConfig.GetStringSlice("debug.uin"), strconv.FormatInt(uin, 10)) {
+			ok = true
+		}
+	} else {
+		ok = true
+	}
+	return ok
+}
+
 func (l *Lsp) Serve(bot *bot.Bot) {
 	bot.GroupMemberJoinEvent.Subscribe(func(qqClient *client.QQClient, event *client.MemberJoinGroupEvent) {
 		if err := localdb.Set(localdb.Key("OnGroupMemberJoined", event.Group.Code, event.Member.Uin, event.Member.JoinTime), "",
@@ -234,7 +253,7 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 			"member_code": event.Member.Uin,
 			"member_name": event.Member.DisplayName(),
 		})
-		if m != nil {
+		if m != nil && l.DebugCheck(event.Group.Code, event.Member.Uin, true) {
 			l.SendMsg(m, mmsg.NewGroupTarget(event.Group.Code))
 		}
 	})
@@ -249,7 +268,7 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 			"member_code": event.Member.Uin,
 			"member_name": event.Member.DisplayName(),
 		})
-		if m != nil {
+		if m != nil && l.DebugCheck(event.Group.Code, event.Member.Uin, true) {
 			l.SendMsg(m, mmsg.NewGroupTarget(event.Group.Code))
 		}
 	})
@@ -266,6 +285,19 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 			l.PermissionStateManager.AddBlockList(request.GroupCode, 0)
 			request.Reject(false, "")
 			return
+		}
+
+		requests, err := l.LspStateManager.ListGroupInvitedRequest()
+		if err != nil {
+			log.Errorf("ListGroupInvitedRequest error - %v", err)
+			return
+		}
+		for _, r := range requests {
+			if r.GroupCode == request.GroupCode {
+				l.LspStateManager.DeleteGroupInvitedRequest(request.RequestId)
+				log.Info("收到加群邀请，该群聊已在申请列表中，将忽略该申请")
+				return
+			}
 		}
 
 		fi := bot.FindFriend(request.InvitorUin)
@@ -331,6 +363,18 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 			log.Info("收到好友申请，该用户在block列表中，将拒绝好友申请")
 			request.Reject()
 			return
+		}
+		req, err := l.LspStateManager.ListNewFriendRequest()
+		if err != nil {
+			log.Errorf("ListNewFriendRequest error %v", err)
+			return
+		}
+		for _, r := range req {
+			if r.RequesterUin == request.RequesterUin {
+				l.LspStateManager.DeleteNewFriendRequest(request.RequestId)
+				log.Info("收到好友申请，该用户已在申请列表中，将忽略该申请")
+				return
+			}
 		}
 		switch l.LspStateManager.GetCurrentMode() {
 		case PrivateMode:
@@ -468,7 +512,7 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 				}
 			}
 			m, _ := template.LoadAndExec("trigger.group.poke.tmpl", data)
-			if m != nil {
+			if m != nil && l.DebugCheck(event.GroupCode, event.Sender, true) {
 				l.SendMsg(m, mmsg.NewGroupTarget(event.GroupCode))
 			}
 		}
@@ -485,7 +529,7 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 					data["member_name"] = fi.Nickname
 				}
 				m, _ := template.LoadAndExec("trigger.private.poke.tmpl", data)
-				if m != nil {
+				if m != nil && l.DebugCheck(0, event.Sender, false) {
 					l.SendMsg(m, mmsg.NewPrivateTarget(event.Sender))
 				}
 			}
@@ -503,7 +547,8 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 			return
 		}
 		//fmt.Printf("运行到cmd := NewLspGroupCommand(l, msg)啦!")
-		fmt.Printf("%+v\n", msg)
+		//fmt.Printf("%+v\n", msg)
+		logger.Debugf("%+v\n", msg)
 		cmd := NewLspGroupCommand(l, msg)
 		if Debug {
 			cmd.Debug()
@@ -525,6 +570,31 @@ func (l *Lsp) Serve(bot *bot.Bot) {
 	bot.GroupMuteEvent.Subscribe(func(qqClient *client.QQClient, event *client.GroupMuteEvent) {
 		if err := l.LspStateManager.Muted(event.GroupCode, event.TargetUin, event.Time); err != nil {
 			logger.Errorf("Muted failed %v", err)
+		}
+		if event.TargetUin == localutils.GetBot().GetUin() {
+			data := map[string]interface{}{
+				"group_code":    event.GroupCode,
+				"member_code":   event.TargetUin,
+				"operator_code": event.OperatorUin,
+				"mute_duration": event.Time,
+			}
+			if gi := localutils.GetBot().FindGroup(event.GroupCode); gi != nil {
+				data["group_name"] = gi.Name
+				if fi := gi.FindMember(event.TargetUin); fi != nil {
+					data["member_name"] = fi.DisplayName()
+				}
+				if fi := gi.FindMember(event.OperatorUin); fi != nil {
+					data["operator_name"] = fi.DisplayName()
+				}
+			}
+			m, _ := template.LoadAndExec("trigger.group.bot_mute.tmpl", data)
+			if m != nil {
+				if admin := l.PermissionStateManager.ListAdmin(); len(admin) > 0 {
+					l.SendMsg(m, mmsg.NewPrivateTarget(admin[0]))
+				} else {
+					logger.Warn("未设置管理员，取消提示")
+				}
+			}
 		}
 	})
 
@@ -635,7 +705,7 @@ func (l *Lsp) NewVersionNotify(newVersionChan <-chan string) {
 			continue
 		}
 		m := mmsg.NewMSG()
-		m.Textf("DDBOT管理员您好，DDBOT有可用更新版本【%v】，请前往 https://github.com/Sora233/DDBOT/releases 查看详细信息\n\n", newVersion)
+		m.Textf("DDBOT管理员您好，DDBOT有可用更新版本【%v】，请前往 https://github.com/cnxysoft/DDBOT-WSa/releases 查看详细信息\n\n", newVersion)
 		m.Textf("如果您不想接收更新消息，请输入<%v>(不含括号)", l.CommandShowName(NoUpdateCommand))
 		for _, admin := range l.PermissionStateManager.ListAdmin() {
 			if localdb.Exist(localdb.DDBotNoUpdateKey(admin)) {
@@ -697,9 +767,10 @@ func (l *Lsp) SendMsg(m *mmsg.MSG, target mmsg.Target) (res []interface{}) {
 	for idx, msg := range msgs {
 		r := l.send(msg, target)
 		res = append(res, r)
-		if reflect.ValueOf(r).Elem().FieldByName("Id").Int() == -1 {
-			break
-		}
+		// 原本的发送返回值已经无效，故直接无视
+		// if reflect.ValueOf(r).Elem().FieldByName("Id").Int() == -1 {
+		// 	break
+		// }
 		if idx > 1 {
 			time.Sleep(time.Millisecond * 300)
 		}
@@ -728,23 +799,24 @@ func (l *Lsp) sendPrivateMessage(uin int64, msg *message.SendingMessage) (res *m
 	// 	return &message.PrivateMessage{Id: -1, Elements: msg.Elements}
 	// }
 	if msg == nil {
-		logger.WithFields(localutils.FriendLogFields(uin)).Debug("send with nil message")
+		logger.WithFields(localutils.FriendLogFields(uin)).Debug("send with nil private message")
 		return &message.PrivateMessage{Id: -1}
 	}
+	//logger.Debugf("发送私聊消息：%v\n", msgstringer.MsgToString(msg.Elements))
 	msg.Elements = localutils.MessageFilter(msg.Elements, func(element message.IMessageElement) bool {
 		return element != nil
 	})
 	if len(msg.Elements) == 0 {
-		logger.WithFields(localutils.FriendLogFields(uin)).Debug("send with empty message")
+		logger.WithFields(localutils.FriendLogFields(uin)).Debug("send with empty private message")
 		return &message.PrivateMessage{Id: -1}
 	}
 	var newstring = msgstringer.MsgToString(msg.Elements)
 	res = bot.Instance.SendPrivateMessage(uin, msg, newstring)
-	// if res == nil || res.Id == -1 {
-	// 	logger.WithField("content", msgstringer.MsgToString(msg.Elements)).
-	// 		WithFields(localutils.GroupLogFields(uin)).
-	// 		Errorf("发送消息失败")
-	// }
+	if res == nil || res.Id == -1 {
+		logger.WithField("content", msgstringer.MsgToString(msg.Elements)).
+			WithFields(localutils.GroupLogFields(uin)).
+			Errorf("发送私聊消息失败")
+	}
 	if res == nil {
 		res = &message.PrivateMessage{Id: -1, Elements: msg.Elements}
 	}
@@ -770,42 +842,55 @@ func (l *Lsp) sendGroupMessage(groupCode int64, msg *message.SendingMessage, rec
 			}
 		}
 	}()
-	// if bot.Instance == nil || !bot.Instance.Online.Load() {
-	// 	return &message.GroupMessage{Id: -1, Elements: msg.Elements}
-	// }
-	// if l.LspStateManager.IsMuted(groupCode, bot.Instance.Uin) {
-	// 	logger.WithField("content", msgstringer.MsgToString(msg.Elements)).
-	// 		WithFields(localutils.GroupLogFields(groupCode)).
-	// 		Debug("BOT被禁言无法发送群消息")
-	// 	return &message.GroupMessage{Id: -1, Elements: msg.Elements}
-	// }
+	if bot.Instance == nil || !bot.Instance.Online.Load() {
+		return &message.GroupMessage{Id: -1, Elements: msg.Elements}
+	}
+	if l.LspStateManager.IsMuted(groupCode, bot.Instance.Uin) {
+		logger.WithField("content", msgstringer.MsgToString(msg.Elements)).
+			WithFields(localutils.GroupLogFields(groupCode)).
+			Debug("BOT被禁言无法发送群消息")
+		return &message.GroupMessage{Id: -1, Elements: msg.Elements}
+	}
 	if msg == nil {
-		logger.WithFields(localutils.GroupLogFields(groupCode)).Debug("send with nil message")
+		logger.Debug("消息为空，返回")
+		logger.WithFields(localutils.GroupLogFields(groupCode)).Debug("send with nil group message")
 		return &message.GroupMessage{Id: -1}
 	}
-	// msg.Elements = localutils.MessageFilter(msg.Elements, func(element message.IMessageElement) bool {
-	// 	return element != nil
-	// })
+	//logger.Debugf("发送群消息：%v\n", msgstringer.MsgToString(msg.Elements))
+	msg.Elements = localutils.MessageFilter(msg.Elements, func(element message.IMessageElement) bool {
+		return element != nil
+	})
 	if len(msg.Elements) == 0 {
-		logger.WithFields(localutils.GroupLogFields(groupCode)).Debug("send with empty message")
+		//logger.Debug("消息元素为空，返回")
+		logger.WithFields(localutils.GroupLogFields(groupCode)).Debug("send with empty group message")
 		return &message.GroupMessage{Id: -1}
 	}
 	var newstring = msgstringer.MsgToString(msg.Elements)
-	res = bot.Instance.SendGroupMessage(groupCode, msg, newstring)
-	// if res == nil || res.Id == -1 {
-	// 	if msg.Count(func(e message.IMessageElement) bool {
-	// 		return e.Type() == message.At && e.(*message.AtElement).Target == 0
-	// 	}) > 0 {
-	// 		logger.WithField("content", msgstringer.MsgToString(msg.Elements)).
-	// 			WithFields(localutils.GroupLogFields(groupCode)).
-	// 			Errorf("发送群消息失败，可能是@全员次数用尽")
-	// 	} else {
-	// 		logger.WithField("content", msgstringer.MsgToString(msg.Elements)).
-	// 			WithFields(localutils.GroupLogFields(groupCode)).
-	// 			Errorf("发送群消息失败，可能是被禁言或者账号被风控")
-	// 	}
-	// }
+	ret := bot.Instance.SendGroupMessage(groupCode, msg, newstring)
+	res = ret.RetMSG
+	err := ret.Error
+	if err != nil {
+		msgStr := msgstringer.MsgToString(msg.Elements)
+		if len(msgStr) > 150 {
+			msgStr = msgStr[:150] + "..."
+		}
+		logger.WithField("content", msgStr).
+			WithFields(localutils.GroupLogFields(groupCode)).
+			Error(err)
+		// if msg.Count(func(e message.IMessageElement) bool {
+		// 	return e.Type() == message.At && e.(*message.AtElement).Target == 0
+		// }) > 0 {
+		// 	logger.WithField("content", msgStr).
+		// 		WithFields(localutils.GroupLogFields(groupCode)).
+		// 		Errorf("发送群消息失败，可能是@全员次数用尽")
+		// } else {
+		// 	logger.WithField("content", msgStr).
+		// 		WithFields(localutils.GroupLogFields(groupCode)).
+		// 		Errorf("发送群消息失败，可能是被禁言或者账号被风控")
+		// }
+	}
 	if res == nil {
+		logger.WithFields(localutils.GroupLogFields(groupCode)).Debug("failed to send message")
 		res = &message.GroupMessage{Id: -1, Elements: msg.Elements}
 	}
 	return res

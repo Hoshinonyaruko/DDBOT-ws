@@ -2,6 +2,10 @@ package bilibili
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	localdb "github.com/Sora233/DDBOT/lsp/buntdb"
 	"github.com/Sora233/DDBOT/lsp/cfg"
 	"github.com/Sora233/DDBOT/lsp/concern"
@@ -13,9 +17,6 @@ import (
 	"github.com/Sora233/MiraiGo-Template/utils"
 	"github.com/tidwall/buntdb"
 	"go.uber.org/atomic"
-	"strings"
-	"sync"
-	"time"
 )
 
 var logger = utils.GetModuleLogger("bilibili-concern")
@@ -208,9 +209,12 @@ func (c *Concern) Add(ctx mmsg.IMsgCtx,
 						if resp.Code == 22015 {
 							log.Errorf("关注用户失败 %v - %v | 请尝试手动登陆b站账户关注该用户，如果您已手动关注该用户，请在20秒后重试", resp.GetCode(), resp.GetMessage())
 							return nil, fmt.Errorf("关注用户失败 - %v", resp.GetMessage())
+						} else if resp.Code == 22014 {
+							log.Infof("当前B站账户已关注该用户，跳过关注")
+						} else {
+							log.Errorf("关注用户失败 %v - %v", resp.GetCode(), resp.GetMessage())
+							return nil, fmt.Errorf("关注用户失败 - %v", resp.GetMessage())
 						}
-						log.Errorf("关注用户失败 %v - %v", resp.GetCode(), resp.GetMessage())
-						return nil, fmt.Errorf("关注用户失败 - %v", resp.GetMessage())
 					}
 				}
 			}

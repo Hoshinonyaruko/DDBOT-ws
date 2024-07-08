@@ -18,6 +18,7 @@ type (
 		InvitorNick string `json:"invitor_nick"`
 		GroupCode   int64  `json:"group_id"`
 		GroupName   string `json:"group_name"`
+		Flag        string `json:"flag"`
 
 		Checked bool  `json:"checked"`
 		Actor   int64 `json:"actor"`
@@ -34,6 +35,7 @@ type (
 		GroupName     string `json:"group_name"`
 		ActionUinNick string `json:"action_uin_nick"`
 		ActionUin     int64  `json:"action_uin"`
+		Flag          string `json:"flag"`
 
 		Checked    bool  `json:"checked"`
 		Actor      int64 `json:"actor"`

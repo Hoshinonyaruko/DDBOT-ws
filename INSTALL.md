@@ -270,6 +270,20 @@ customCommandPrefix:
   命令2: ""
 
 logLevel: info # 日志等级
+
+# ws模式支持ws-server（正向）和ws-reverse（反向）
+# ws-server 默认监听全部请求，如需限制请修改为指定ip:端口
+# ws-reverse 需要配合反向ws服务器使用，默认为LLOneBot地址
+websocket:
+  mode: ws-reverse 
+  ws-server: 0.0.0.0:15630
+  ws-reverse: ws://localhost:3001
+
+# 延迟加载好友、群组、群员信息
+reloadDelay:
+  enable: true # 是否启用数据延迟加载
+  time: 3s # 延迟时间，默认为3秒
+
 ```
 
 </details>

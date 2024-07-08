@@ -4,6 +4,14 @@
 [<img src="https://coveralls.io/repos/github/Sora233/DDBOT/badge.svg?branch=master"/>](https://coveralls.io/github/Sora233/DDBOT)
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://pkg.go.dev/github.com/Sora233/DDBOT)
 
+DDBOT-WSa 是基于 DDBOT-ws 的修改版本，目的是恢复DDBOT的原有功能。
+其它更详细的更动见更新日志。
+目前已经兼容：LLOnebot v3.x / NapCat v1.x / ws-plugin v0.6.x。
+
+**目前已经修复所有的主要指令（奇奇怪怪的指令没测试）。**
+
+以下是原DDBOT-ws的README.md：
+
 DDBOT是一个基于 [MiraiGO](https://github.com/Mrs4s/MiraiGo) 的QQ群推送框架， 内置支持b站直播/动态，斗鱼直播，YTB直播/预约直播，虎牙直播，ACFUN直播，微博动态，
 也可以通过插件支持任何订阅源。
 

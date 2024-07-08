@@ -2,11 +2,11 @@ package permission
 
 import (
 	"errors"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Mrs4s/MiraiGo/client"
 	localdb "github.com/Sora233/DDBOT/lsp/buntdb"
 	localutils "github.com/Sora233/DDBOT/utils"
 	"github.com/Sora233/MiraiGo-Template/utils"
@@ -197,54 +197,54 @@ func (c *StateManager) UndoGroupSilence(groupCode int64) error {
 	return err
 }
 
-// func (c *StateManager) CheckGroupAdministrator(groupCode int64, caller int64) bool {
-// 	// log := logger.WithFields(logrus.Fields{
-// 	// 	"GroupCode": groupCode,
-// 	// 	"Caller":    caller,
-// 	// })
-// 	// groupInfo := localutils.GetBot().FindGroup(groupCode)
-// 	// log.Errorf("获取到的groupInfo: %v\n", groupInfo)
-// 	// if groupInfo == nil {
-// 	// 	log.Errorf("nil group info")
-// 	// 	return false
-// 	// }
-// 	// log = log.WithField("GroupName", groupInfo.Name)
-// 	// groupMemberInfo := groupInfo.FindMember(caller)
-// 	// if groupMemberInfo == nil {
-// 	// 	//报错这个
-// 	// 	log.Errorf("nil member info")
-// 	// 	return false
-// 	// }
-// 	// return groupMemberInfo.Permission == client.Administrator || groupMemberInfo.Permission == client.Owner
-// 	return true
-// }
-
 func (c *StateManager) CheckGroupAdministrator(groupCode int64, caller int64) bool {
 	log := logger.WithFields(logrus.Fields{
 		"GroupCode": groupCode,
 		"Caller":    caller,
 	})
-	log.Errorf("正在admin.txt检查权限,一行一个\n")
-	// 打开并读取admin.txt
-	data, err := ioutil.ReadFile("admin.txt")
-	if err != nil {
-		// 如果有任何错误，比如文件不存在，我们可以直接返回false或输出错误日志
-		log.Printf("Error reading admin.txt: %v", err)
+	groupInfo := localutils.GetBot().FindGroup(groupCode)
+	log.Debugf("获取到的groupInfo: %v\n", groupInfo)
+	if groupInfo == nil {
+		log.Errorf("nil group info")
 		return false
 	}
-
-	// 将文件内容按行拆分
-	lines := strings.Split(string(data), "\n")
-
-	// 检查每一行
-	for _, line := range lines {
-		line = strings.TrimSpace(line) // 清除可能的空格和换行符
-		if strconv.FormatInt(caller, 10) == line {
-			return true
-		}
+	log = log.WithField("GroupName", groupInfo.Name)
+	groupMemberInfo := groupInfo.FindMember(caller)
+	if groupMemberInfo == nil {
+		//没有找到群成员信息
+		log.Errorf("nil member info")
+		return false
 	}
-	return false
+	return groupMemberInfo.Permission == client.Administrator || groupMemberInfo.Permission == client.Owner
+	//return true
 }
+
+// func (c *StateManager) CheckGroupAdministrator(groupCode int64, caller int64) bool {
+// 	log := logger.WithFields(logrus.Fields{
+// 		"GroupCode": groupCode,
+// 		"Caller":    caller,
+// 	})
+// 	log.Info("正在admin.txt检查权限,一行一个\n")
+// 	// 打开并读取admin.txt
+// 	data, err := ioutil.ReadFile("admin.txt")
+// 	if err != nil {
+// 		// 如果有任何错误，比如文件不存在，我们可以直接返回false或输出错误日志
+// 		log.Printf("Error reading admin.txt: %v", err)
+// 		return false
+// 	}
+
+// 	// 将文件内容按行拆分
+// 	lines := strings.Split(string(data), "\n")
+
+// 	// 检查每一行
+// 	for _, line := range lines {
+// 		line = strings.TrimSpace(line) // 清除可能的空格和换行符
+// 		if strconv.FormatInt(caller, 10) == line {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func (c *StateManager) CheckGroupCommandPermission(groupCode int64, caller int64, command string) bool {
 	return c.CheckRole(caller, Admin) || c.Exist(c.PermissionKey(groupCode, caller, command))

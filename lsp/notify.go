@@ -3,14 +3,15 @@ package lsp
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
+	"time"
+
 	"github.com/Mrs4s/MiraiGo/message"
 	"github.com/Sora233/DDBOT/lsp/concern"
 	"github.com/Sora233/DDBOT/lsp/mmsg"
 	"github.com/Sora233/DDBOT/utils"
 	"github.com/Sora233/DDBOT/utils/msgstringer"
 	"github.com/sirupsen/logrus"
-	"runtime/debug"
-	"time"
 )
 
 func (l *Lsp) ConcernNotify() {

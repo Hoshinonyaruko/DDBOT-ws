@@ -30,7 +30,9 @@ func GetAttentionList() (*GetAttentionListResponse, error) {
 	)
 	opts = append(opts, GetVerifyOption()...)
 	getAttentionListResp := new(GetAttentionListResponse)
-	err := requests.Get(url, nil, getAttentionListResp, opts...)
+	err := requests.Get(url, map[string]interface{}{
+		"uid": accountUid.String(),
+	}, getAttentionListResp, opts...)
 	if err != nil {
 		return nil, err
 	}

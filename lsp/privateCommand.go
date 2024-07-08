@@ -4,6 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
+	"runtime/debug"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/Mrs4s/MiraiGo/message"
 	localdb "github.com/Sora233/DDBOT/lsp/buntdb"
 	"github.com/Sora233/DDBOT/lsp/concern"
@@ -16,11 +22,6 @@ import (
 	"github.com/Sora233/sliceutil"
 	"github.com/alecthomas/kong"
 	"github.com/sirupsen/logrus"
-	"os"
-	"runtime/debug"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type LspPrivateCommand struct {
@@ -797,7 +798,7 @@ func (c *LspPrivateCommand) QuitCommand() {
 			return
 		}
 	} else {
-		gi.Quit()
+		gi.Quit((*(*(*(*(*(c)).Runtime).bot).Bot)).QQClient)
 		log.Debugf("已退出群【%v】", displayName)
 		c.textSend(fmt.Sprintf("已退出群【%v】", displayName))
 	}

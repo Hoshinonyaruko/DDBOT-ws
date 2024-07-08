@@ -1,7 +1,6 @@
 package msgstringer
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -18,11 +17,13 @@ func MsgToString(elements []message.IMessageElement) string {
 			continue
 		}
 		// Print each element's type for debugging
-		fmt.Printf("Element %d is of type %T\n", i, elem)
+		logger.Debugf(`Element %d is of type %T\n`, i, elem)
+		//fmt.Printf("Element %d is of type %T\n", i, elem)
 		switch e := elem.(type) {
 		case *message.TextElement:
 			res.WriteString(e.Content)
-			fmt.Printf("Content of TextElement: %s\n", e.Content)
+			//fmt.Printf("Content of TextElement: %s\n", e.Content)
+			logger.Debugf(`Content of TextElement: %s\n`, e.Content)
 		case *message.FaceElement:
 			res.WriteString("[")
 			res.WriteString(e.Name)
@@ -40,16 +41,23 @@ func MsgToString(elements []message.IMessageElement) string {
 				res.WriteString("[Image]")
 			}
 		case *message.AtElement:
-			res.WriteString(e.Display)
+			res.WriteString("[CQ:at,qq=")
+			if e.Target == 0 {
+				res.WriteString("all")
+			} else {
+				res.WriteString(strconv.FormatInt(e.Target, 10))
+			}
+			res.WriteString("]")
 		case *message.RedBagElement:
 			res.WriteString("[RedBag:")
 			res.WriteString(e.Title)
 			res.WriteString("]")
 		case *message.ReplyElement:
-			fmt.Printf("暂时不发送at:[Reply:%s]\n", strconv.FormatInt(int64(e.ReplySeq), 10))
-			// res.WriteString("[Reply:")
-			// res.WriteString(strconv.FormatInt(int64(e.ReplySeq), 10))
-			// res.WriteString("]")
+			//fmt.Printf("暂时不发送at:[Reply:%s]\n", strconv.FormatInt(int64(e.ReplySeq), 10))
+			//logger.Infof(`暂时不发送at:[Reply:%s]\n`, strconv.FormatInt(int64(e.ReplySeq), 10))
+			res.WriteString("[CQ:reply,id=")
+			res.WriteString(strconv.FormatInt(int64(e.ReplySeq), 10))
+			res.WriteString("]")
 		case *message.GroupFileElement:
 			res.WriteString("[File]")
 			res.WriteString(e.Name)
